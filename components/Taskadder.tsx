@@ -1,26 +1,43 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, Flag, Tag } from 'lucide-react';
+
+export interface TaskData {
+  id?: string;
+  title: string;
+  dueDate: string;
+  priority: 'Low' | 'Medium' | 'High';
+}
 
 interface TaskadderProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddTask: (task: {
-    title: string;
-    dueDate: string;
-    priority: 'Low' | 'Medium' | 'High';
-  }) => void;
+  onSaveTask: (task: TaskData) => void;
+  initialData?: TaskData | null;
 }
 
 export const Taskadder: React.FC<TaskadderProps> = ({
   isOpen,
   onClose,
-  onAddTask,
+  onSaveTask,
+  initialData,
 }) => {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title);
+      setDueDate(initialData.dueDate);
+      setPriority(initialData.priority);
+    } else {
+      setTitle('');
+      setDueDate('');
+      setPriority('Medium');
+    }
+  }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
@@ -28,27 +45,25 @@ export const Taskadder: React.FC<TaskadderProps> = ({
     e.preventDefault();
     if (!title.trim()) return;
 
-    onAddTask({
+    onSaveTask({
+      id: initialData?.id,
       title,
       dueDate: dueDate || 'Today',
       priority,
     });
 
-    setTitle('');
-    setDueDate('');
-    setPriority('Medium');
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop with Fade-In */}
+      {/* Backdrop */}
       <div
         onClick={onClose}
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-[fadeIn_0.2s_ease-out]"
       />
 
-      {/* Modal with Pop / Scale Animation */}
+      {/* Modal Container */}
       <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-10 transform transition-all animate-[popIn_0.25s_cubic-bezier(0.16,1,0.3,1)]">
         
         {/* Header */}
@@ -56,7 +71,7 @@ export const Taskadder: React.FC<TaskadderProps> = ({
           <div className="flex items-center gap-2">
             <Tag className="w-5 h-5 text-black dark:text-white" />
             <h2 className="text-lg font-semibold text-black dark:text-white">
-              Create New Task
+              {initialData ? 'Edit Task' : 'Create New Task'}
             </h2>
           </div>
           <button
@@ -135,7 +150,7 @@ export const Taskadder: React.FC<TaskadderProps> = ({
               type="submit"
               className="px-4 py-2 text-sm font-medium bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-lg transition-all duration-150 active:scale-95 shadow-sm cursor-pointer"
             >
-              Add Task
+              {initialData ? 'Save Changes' : 'Add Task'}
             </button>
           </div>
         </form>

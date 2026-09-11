@@ -11,9 +11,11 @@ import {
   List,
   Search,
   Check,
-  AlertCircle
+  AlertCircle,
+  Pencil,
+  Trash2
 } from 'lucide-react';
-import { Taskadder } from './Taskadder';
+import { Taskadder, TaskData } from './Taskadder';
 
 interface Task {
   id: string;
@@ -29,7 +31,10 @@ export const Dashboard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<'All' | 'Pending' | 'Completed'>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingTask, setEditingTask] = useState<TaskData | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -57,19 +62,46 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleAddTask = (newTaskData: {
-    title: string;
-    dueDate: string;
-    priority: 'Low' | 'Medium' | 'High';
-  }) => {
-    const newTask: Task = {
-      id: Date.now().toString(),
-      title: newTaskData.title,
-      dueDate: newTaskData.dueDate,
-      priority: newTaskData.priority,
-      status: 'Pending',
-    };
-    setTasks((prev) => [newTask, ...prev]);
+  const handleOpenCreateModal = () => {
+    setEditingTask(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (task: Task) => {
+    setEditingTask({
+      id: task.id,
+      title: task.title,
+      dueDate: task.dueDate,
+      priority: task.priority,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSaveTask = (taskData: TaskData) => {
+    if (taskData.id) {
+      // Edit existing task
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskData.id
+            ? { ...t, title: taskData.title, dueDate: taskData.dueDate, priority: taskData.priority }
+            : t
+        )
+      );
+    } else {
+      // Create new task
+      const newTask: Task = {
+        id: Date.now().toString(),
+        title: taskData.title,
+        dueDate: taskData.dueDate,
+        priority: taskData.priority,
+        status: 'Pending',
+      };
+      setTasks((prev) => [newTask, ...prev]);
+    }
+  };
+
+  const handleDeleteTask = (id: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
   };
 
   const handleToggleTask = (id: string) => {
@@ -130,7 +162,7 @@ export const Dashboard: React.FC = () => {
                 <Moon className="w-5 h-5 text-zinc-800 transition-transform duration-300 rotate-0 hover:-rotate-12" />
               )}
             </button>
-            
+
           </div>
         </div>
       </header>
@@ -147,7 +179,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenCreateModal}
             className="inline-flex items-center justify-center gap-2 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-black font-medium px-4 py-2.5 rounded-lg transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -227,7 +259,7 @@ export const Dashboard: React.FC = () => {
               filteredTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="p-4 flex items-center justify-between hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-all duration-200 animate-[fadeIn_0.25s_ease-out]"
+                  className="p-4 flex items-center justify-between hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-all duration-200 animate-[fadeIn_0.25s_ease-out] group"
                 >
                   <div className="flex items-center gap-3">
                     <button
@@ -258,17 +290,37 @@ export const Dashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                      task.status === 'In Progress'
-                        ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
-                        : task.status === 'Pending'
-                        ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
-                        : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent'
-                    }`}
-                  >
-                    {task.status}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors duration-200 ${
+                        task.status === 'In Progress'
+                          ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
+                          : task.status === 'Pending'
+                          ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
+                          : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent'
+                      }`}
+                    >
+                      {task.status}
+                    </span>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+                      <button
+                        onClick={() => handleOpenEditModal(task)}
+                        title="Edit Task"
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-150 active:scale-95 cursor-pointer"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        title="Delete Task"
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all duration-150 active:scale-95 cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))
             ) : (
@@ -283,7 +335,8 @@ export const Dashboard: React.FC = () => {
       <Taskadder
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onAddTask={handleAddTask}
+        onSaveTask={handleSaveTask}
+        initialData={editingTask}
       />
     </div>
   );
