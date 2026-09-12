@@ -34,7 +34,7 @@ export const Dashboard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<'All' | 'Pending' | 'Completed'>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingTask, setEditingTask] = useState<TaskData | null>(null);
@@ -76,12 +76,7 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleOpenEditModal = (task: Task) => {
-    setEditingTask({
-      id: task.id,
-      title: task.title,
-      dueDate: task.dueDate,
-      priority: task.priority,
-    });
+    setEditingTask(task as any);
     setIsModalOpen(true);
   };
 
@@ -166,8 +161,8 @@ export const Dashboard: React.FC = () => {
       filter === 'All'
         ? true
         : filter === 'Pending'
-        ? task.status !== 'Completed'
-        : task.status === 'Completed';
+          ? task.status !== 'Completed'
+          : task.status === 'Completed';
 
     const matchesSearch = task.title
       .toLowerCase()
@@ -293,11 +288,10 @@ export const Dashboard: React.FC = () => {
                   <button
                     key={tab}
                     onClick={() => setFilter(tab)}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer active:scale-95 ${
-                      filter === tab
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer active:scale-95 ${filter === tab
                         ? 'bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs'
                         : 'text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white'
-                    }`}
+                      }`}
                   >
                     {filterLabel(tab)}
                   </button>
@@ -316,11 +310,10 @@ export const Dashboard: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleToggleTask(task.id)}
-                      className={`w-5 h-5 rounded border flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${
-                        task.status === 'Completed'
+                      className={`w-5 h-5 rounded border flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${task.status === 'Completed'
                           ? 'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black scale-100'
                           : 'border-zinc-300 dark:border-zinc-700 bg-transparent hover:border-black dark:hover:border-white'
-                      }`}
+                        }`}
                     >
                       {task.status === 'Completed' && (
                         <Check className="w-3.5 h-3.5 stroke-[3] animate-[popIn_0.2s_ease-out]" />
@@ -328,11 +321,10 @@ export const Dashboard: React.FC = () => {
                     </button>
                     <div>
                       <p
-                        className={`font-medium transition-all duration-200 ${
-                          task.status === 'Completed'
+                        className={`font-medium transition-all duration-200 ${task.status === 'Completed'
                             ? 'text-zinc-400 dark:text-zinc-500 line-through'
                             : 'text-black dark:text-white'
-                        }`}
+                          }`}
                       >
                         {task.title}
                       </p>
@@ -344,13 +336,12 @@ export const Dashboard: React.FC = () => {
 
                   <div className="flex items-center gap-3">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                        task.status === 'In Progress'
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors duration-200 ${task.status === 'In Progress'
                           ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
                           : task.status === 'Pending'
-                          ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
-                          : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent'
-                      }`}
+                            ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
+                            : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent'
+                        }`}
                     >
                       {statusLabel(task.status)}
                     </span>
