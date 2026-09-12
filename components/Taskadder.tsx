@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Flag, Tag } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export interface TaskData {
     id?: string;
@@ -26,6 +27,7 @@ export const Taskadder: React.FC<TaskadderProps> = ({
     const [title, setTitle] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
+    const { t } = useLanguage();
 
     useEffect(() => {
         if (initialData) {
@@ -83,7 +85,7 @@ export const Taskadder: React.FC<TaskadderProps> = ({
                     <div className="flex items-center gap-2">
                         <Tag className="w-5 h-5 text-black dark:text-white" />
                         <h2 className="text-lg font-semibold text-black dark:text-white">
-                            {initialData ? 'Edit Task' : 'Create New Task'}
+                            {initialData ? t.editTaskTitle : t.createNewTaskTitle}
                         </h2>
                     </div>
                     <button
@@ -98,13 +100,13 @@ export const Taskadder: React.FC<TaskadderProps> = ({
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div>
                         <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                            Task Title
+                            {t.taskTitle}
                         </label>
                         <input
                             type="text"
                             required
                             autoFocus
-                            placeholder="e.g. Design landing page hero section"
+                            placeholder={t.taskTitlePlaceholder}
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             className="w-full px-3.5 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-black dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-150"
@@ -114,36 +116,36 @@ export const Taskadder: React.FC<TaskadderProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                                Due Date
+                                {t.dueDate}
                             </label>
                             <div className="relative">
-                                <Calendar className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                                <Calendar className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                                 <input
                                     type="text"
-                                    placeholder="e.g. Tomorrow or Sep 20"
+                                    placeholder={t.dueDatePlaceholder}
                                     value={dueDate}
                                     onChange={(e) => setDueDate(e.target.value)}
-                                    className="w-full pl-9 pr-3.5 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-black dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-150"
+                                    className="w-full ps-9 pe-3.5 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-black dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-150"
                                 />
                             </div>
                         </div>
 
                         <div>
                             <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                                Priority
+                                {t.priorityLabel}
                             </label>
                             <div className="relative">
-                                <Flag className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                                <Flag className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                                 <select
                                     value={priority}
                                     onChange={(e) =>
                                         setPriority(e.target.value as 'Low' | 'Medium' | 'High')
                                     }
-                                    className="w-full pl-9 pr-3.5 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-150 cursor-pointer"
+                                    className="w-full ps-9 pe-3.5 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-150 cursor-pointer"
                                 >
-                                    <option value="Low">Low Priority</option>
-                                    <option value="Medium">Medium Priority</option>
-                                    <option value="High">High Priority</option>
+                                    <option value="Low">{t.lowPriority}</option>
+                                    <option value="Medium">{t.mediumPriority}</option>
+                                    <option value="High">{t.highPriority}</option>
                                 </select>
                             </div>
                         </div>
@@ -156,13 +158,13 @@ export const Taskadder: React.FC<TaskadderProps> = ({
                             onClick={onClose}
                             className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer"
                         >
-                            Cancel
+                            {t.cancel}
                         </button>
                         <button
                             type="submit"
                             className="px-4 py-2 text-sm font-medium bg-black dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-lg transition-all duration-150 active:scale-95 shadow-sm cursor-pointer"
                         >
-                            {initialData ? 'Save Changes' : 'Add Task'}
+                            {initialData ? t.saveChanges : t.addTask}
                         </button>
                     </div>
                 </form>

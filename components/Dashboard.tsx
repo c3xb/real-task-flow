@@ -13,9 +13,12 @@ import {
   Check,
   AlertCircle,
   Pencil,
-  Trash2
+  Trash2,
+  Settings,
 } from 'lucide-react';
 import { Taskadder, TaskData } from './Taskadder';
+import { SettingsDrawer } from './SettingsDrawer';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface Task {
   id: string;
@@ -35,6 +38,11 @@ export const Dashboard: React.FC = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingTask, setEditingTask] = useState<TaskData | null>(null);
+
+  // Settings Drawer State
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  const { t } = useLanguage();
 
   useEffect(() => {
     setMounted(true);
@@ -117,6 +125,42 @@ export const Dashboard: React.FC = () => {
     );
   };
 
+  // Localized status labels
+  const statusLabel = (status: Task['status']): string => {
+    switch (status) {
+      case 'In Progress':
+        return t.inProgress;
+      case 'Pending':
+        return t.pending;
+      case 'Completed':
+        return t.completed;
+    }
+  };
+
+  // Localized priority labels
+  const priorityLabel = (priority: Task['priority']): string => {
+    switch (priority) {
+      case 'Low':
+        return t.lowPriority;
+      case 'Medium':
+        return t.mediumPriority;
+      case 'High':
+        return t.highPriority;
+    }
+  };
+
+  // Localized filter tab labels
+  const filterLabel = (tab: 'All' | 'Pending' | 'Completed'): string => {
+    switch (tab) {
+      case 'All':
+        return t.all;
+      case 'Pending':
+        return t.pending;
+      case 'Completed':
+        return t.completed;
+    }
+  };
+
   const filteredTasks = tasks.filter((task) => {
     const matchesFilter =
       filter === 'All'
@@ -146,14 +190,14 @@ export const Dashboard: React.FC = () => {
               <CheckSquare className="w-5 h-5" />
             </div>
             <span className="font-bold text-xl tracking-tight text-black dark:text-white">
-              Task Flow
+              {t.appName}
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <button
               onClick={toggleTheme}
-              aria-label="Toggle theme"
+              aria-label={t.toggleTheme}
               className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all duration-200 active:scale-95 cursor-pointer"
             >
               {mounted && darkMode ? (
@@ -163,6 +207,14 @@ export const Dashboard: React.FC = () => {
               )}
             </button>
 
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              aria-label={t.settings}
+              id="settings-button"
+              className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all duration-200 active:scale-95 cursor-pointer"
+            >
+              <Settings className="w-5 h-5 transition-transform duration-300 hover:rotate-90" />
+            </button>
           </div>
         </div>
       </header>
@@ -171,10 +223,10 @@ export const Dashboard: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-black dark:text-white">
-              Dashboard
+              {t.dashboard}
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
-              Welcome back! Here is an overview of your tasks.
+              {t.welcomeMessage}
             </p>
           </div>
 
@@ -183,17 +235,17 @@ export const Dashboard: React.FC = () => {
             className="inline-flex items-center justify-center gap-2 bg-black hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-black font-medium px-4 py-2.5 rounded-lg transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Create New Task</span>
+            <span>{t.createNewTask}</span>
           </button>
         </div>
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Total Tasks', value: totalTasks, icon: List },
-            { label: 'In Progress', value: inProgressTasks, icon: Clock },
-            { label: 'Completed', value: completedTasks, icon: CheckCircle2 },
-            { label: 'Pending', value: pendingTasks, icon: AlertCircle },
+            { label: t.totalTasks, value: totalTasks, icon: List },
+            { label: t.inProgress, value: inProgressTasks, icon: Clock },
+            { label: t.completed, value: completedTasks, icon: CheckCircle2 },
+            { label: t.pending, value: pendingTasks, icon: AlertCircle },
           ].map((item, idx) => {
             const Icon = item.icon;
             return (
@@ -221,18 +273,18 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xs overflow-hidden">
           <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="font-semibold text-lg text-black dark:text-white">
-              Recent Tasks
+              {t.recentTasks}
             </h2>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
-                  placeholder="Search tasks..."
+                  placeholder={t.searchTasks}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-48 pl-9 pr-3 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-200"
+                  className="w-full sm:w-48 ps-9 pe-3 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all duration-200"
                 />
               </div>
 
@@ -247,7 +299,7 @@ export const Dashboard: React.FC = () => {
                         : 'text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white'
                     }`}
                   >
-                    {tab}
+                    {filterLabel(tab)}
                   </button>
                 ))}
               </div>
@@ -285,7 +337,7 @@ export const Dashboard: React.FC = () => {
                         {task.title}
                       </p>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        Due {task.dueDate} • {task.priority} Priority
+                        {t.due} {task.dueDate} • {priorityLabel(task.priority)}
                       </p>
                     </div>
                   </div>
@@ -300,21 +352,21 @@ export const Dashboard: React.FC = () => {
                           : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent'
                       }`}
                     >
-                      {task.status}
+                      {statusLabel(task.status)}
                     </span>
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                       <button
                         onClick={() => handleOpenEditModal(task)}
-                        title="Edit Task"
+                        title={t.editTask}
                         className="p-1.5 rounded-lg text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-150 active:scale-95 cursor-pointer"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
-                        title="Delete Task"
+                        title={t.deleteTask}
                         className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all duration-150 active:scale-95 cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -325,7 +377,7 @@ export const Dashboard: React.FC = () => {
               ))
             ) : (
               <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm animate-[fadeIn_0.3s_ease-out]">
-                No tasks available. Click "Create New Task" to add your first task.
+                {t.noTasksAvailable}
               </div>
             )}
           </div>
@@ -337,6 +389,11 @@ export const Dashboard: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSaveTask={handleSaveTask}
         initialData={editingTask}
+      />
+
+      <SettingsDrawer
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );
