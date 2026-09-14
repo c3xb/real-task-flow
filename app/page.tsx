@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Dashboard from '@/components/Dashboard';
 import TaskCalendar from '@/components/Taskcalender';
 import DailyNotebook from '@/components/dailynotebook';
+import RealNotebook from '@/components/realnotebook';
 import { useLanguage } from '@/lib/LanguageContext';
 
 export default function Home() {
@@ -42,6 +43,9 @@ export default function Home() {
           <DailyNotebook
             selectedDateProp={selectedDate}
             onDateChange={(newDate) => setSelectedDate(newDate)}
+          />
+          <RealNotebook
+
           />
         </div>
       </div>
