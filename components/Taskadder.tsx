@@ -37,7 +37,7 @@ export const Taskadder: React.FC<TaskadderProps> = ({
     const [status, setStatus] = useState<'Pending' | 'In Progress' | 'Completed'>('Pending');
     const [category, setCategory] = useState<'Work' | 'Personal' | 'Study' | 'Health' | 'Other'>('Personal');
     const [estimatedTime, setEstimatedTime] = useState<number | ''>('');
-    const { t } = useLanguage();
+    const { t, dir } = useLanguage();
 
     useEffect(() => {
         if (initialData) {
@@ -103,7 +103,7 @@ export const Taskadder: React.FC<TaskadderProps> = ({
             />
 
             {/* Modal Container */}
-            <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-10 transform transition-all animate-[popIn_0.25s_cubic-bezier(0.16,1,0.3,1)] max-h-[90vh] flex flex-col">
+            <div dir={dir} className="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-10 transform transition-all animate-[popIn_0.25s_cubic-bezier(0.16,1,0.3,1)] max-h-[90vh] flex flex-col">
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">

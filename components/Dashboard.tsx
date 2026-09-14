@@ -42,7 +42,7 @@ export const Dashboard: React.FC = () => {
   // Settings Drawer State
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
-  const { t } = useLanguage();
+  const { t, dir } = useLanguage();
 
   useEffect(() => {
     setMounted(true);
@@ -56,7 +56,32 @@ export const Dashboard: React.FC = () => {
       setDarkMode(false);
       document.documentElement.classList.remove('dark');
     }
+
+    const savedTasks = localStorage.getItem('tf_dashboard_tasks');
+    if (savedTasks) {
+      try {
+        setTasks(JSON.parse(savedTasks));
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      const defaultTasks: Task[] = [
+        { id: '1', title: 'Complete project roadmap architecture', dueDate: new Date().toISOString().split('T')[0], priority: 'High', status: 'In Progress' },
+        { id: '2', title: 'Review weekly habit metrics & reflections', dueDate: new Date().toISOString().split('T')[0], priority: 'Medium', status: 'Pending' },
+      ];
+      setTasks(defaultTasks);
+      localStorage.setItem('tf_dashboard_tasks', JSON.stringify(defaultTasks));
+    }
   }, []);
+
+  const saveTasksAndPersist = (updater: (prev: Task[]) => Task[]) => {
+    setTasks((prev) => {
+      const next = updater(prev);
+      localStorage.setItem('tf_dashboard_tasks', JSON.stringify(next));
+      window.dispatchEvent(new Event('storage'));
+      return next;
+    });
+  };
 
   const toggleTheme = () => {
     const isDark = !darkMode;
@@ -83,7 +108,7 @@ export const Dashboard: React.FC = () => {
   const handleSaveTask = (taskData: TaskData) => {
     if (taskData.id) {
       // Edit existing task
-      setTasks((prev) =>
+      saveTasksAndPersist((prev) =>
         prev.map((t) =>
           t.id === taskData.id
             ? { ...t, title: taskData.title, dueDate: taskData.dueDate, priority: taskData.priority }
@@ -99,16 +124,16 @@ export const Dashboard: React.FC = () => {
         priority: taskData.priority,
         status: 'Pending',
       };
-      setTasks((prev) => [newTask, ...prev]);
+      saveTasksAndPersist((prev) => [newTask, ...prev]);
     }
   };
 
   const handleDeleteTask = (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    saveTasksAndPersist((prev) => prev.filter((t) => t.id !== id));
   };
 
   const handleToggleTask = (id: string) => {
-    setTasks((prevTasks) =>
+    saveTasksAndPersist((prevTasks) =>
       prevTasks.map((task) => {
         if (task.id === id) {
           const nextStatus =
@@ -177,7 +202,7 @@ export const Dashboard: React.FC = () => {
   const pendingTasks = tasks.filter((t) => t.status === 'Pending').length;
 
   return (
-    <div className="mb-0  bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors duration-300">
+    <div className="mb-0 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col transition-colors duration-300" dir={dir}>
       <header className="sticky top-0 z-10 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -309,8 +334,9 @@ export const Dashboard: React.FC = () => {
                 >
                   <div className="flex items-center gap-3">
                     <button
+                      type="button"
                       onClick={() => handleToggleTask(task.id)}
-                      className={`w-5 h-5 rounded border flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${task.status === 'Completed'
+                      className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer shrink-0 ${task.status === 'Completed'
                           ? 'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black scale-100'
                           : 'border-zinc-300 dark:border-zinc-700 bg-transparent hover:border-black dark:hover:border-white'
                         }`}
@@ -349,16 +375,18 @@ export const Dashboard: React.FC = () => {
                     {/* Action Buttons */}
                     <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                       <button
+                        type="button"
                         onClick={() => handleOpenEditModal(task)}
                         title={t.editTask}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-150 active:scale-95 cursor-pointer"
+                        className="p-2 rounded-lg text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-150 active:scale-95 cursor-pointer"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDeleteTask(task.id)}
                         title={t.deleteTask}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all duration-150 active:scale-95 cursor-pointer"
+                        className="p-2 rounded-lg text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all duration-150 active:scale-95 cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

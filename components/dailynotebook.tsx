@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Star,
   Plus,
@@ -15,17 +15,29 @@ import {
   ChevronRight,
   Flame,
   Zap,
-  Smile,
   Target,
   LayoutGrid,
   CheckSquare,
   Sparkles,
-  Trophy,
+  Timer,
+  Play,
+  Pause,
+  RotateCcw,
+  Sun,
+  Sunrise,
+  Moon,
+  Clock,
+  ShieldCheck,
+  Brain,
+  Layers,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export type HabitType = 'Good' | 'Bad' | 'Normal';
-export type TimeOfDay = 'Morning' | 'Afternoon' | 'Evening' | 'Anytime';
-export type Category = 'Health' | 'Fitness' | 'Mindset' | 'Work' | 'Personal';
+export type TimeOfDay = 'Morning' | 'DeepWork' | 'Afternoon' | 'Evening' | 'Anytime';
+export type Category = 'Health' | 'Fitness' | 'DeepWork' | 'Mindset' | 'Personal' | 'Systems';
 
 export interface Habit {
   id: string;
@@ -33,8 +45,8 @@ export interface Habit {
   type: HabitType;
   category: Category;
   timeOfDay: TimeOfDay;
-  targetValue?: number; // e.g., 2000 (ml water), 20 (pages)
-  unit?: string; // e.g., "ml", "pages", "mins"
+  targetValue?: number;
+  unit?: string;
   createdAt: string;
 }
 
@@ -45,23 +57,35 @@ export interface DayLog {
   energy?: 'Low' | 'Medium' | 'High';
   journal: string;
   wins: string[];
-  habitsProgress: Record<string, number>; // habitId -> value achieved (1 for boolean, N for numeric)
+  focusMinutes: number;
+  habitsProgress: Record<string, number>;
 }
 
-const MOOD_OPTIONS = ['😊 Happy', '🎯 Focused', '⚡ Energetic', '🧘 Calm', '😴 Tired', '😤 Stressed'];
-const CATEGORY_COLORS: Record<Category, string> = {
-  Health: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  Fitness: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
-  Mindset: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-  Work: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-  Personal: 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20',
-};
+interface DailyNotebookProps {
+  selectedDateProp?: string;
+  onDateChange?: (date: string) => void;
+}
 
-export const DailyNotebook: React.FC = () => {
-  const [selectedDate, setSelectedDate] = useState<string>(
+export const DailyNotebook: React.FC<DailyNotebookProps> = ({
+  selectedDateProp,
+  onDateChange,
+}) => {
+  const { t, dir } = useLanguage();
+
+  const [internalDate, setInternalDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
-  const [activeTab, setActiveTab] = useState<'today' | 'weekly' | 'manage'>('today');
+  const selectedDate = selectedDateProp || internalDate;
+
+  const handleDateUpdate = (newDate: string) => {
+    if (onDateChange) {
+      onDateChange(newDate);
+    } else {
+      setInternalDate(newDate);
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<'today' | 'timer' | 'weekly' | 'manage'>('today');
 
   // Persistence States
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -78,25 +102,164 @@ export const DailyNotebook: React.FC = () => {
   }>({
     name: '',
     type: 'Good',
-    category: 'Personal',
-    timeOfDay: 'Anytime',
+    category: 'DeepWork',
+    timeOfDay: 'Morning',
     targetValue: '',
     unit: '',
   });
 
   const [newWinInput, setNewWinInput] = useState('');
 
-  // Load Saved Data
+  // ----------------------------------------------------
+  // FOCUS TIMER SYSTEM
+  // ----------------------------------------------------
+  const [timerDurationMinutes, setTimerDurationMinutes] = useState<number>(25);
+  const [timerSecondsRemaining, setTimerSecondsRemaining] = useState<number>(25 * 60);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const [linkedHabitId, setLinkedHabitId] = useState<string>('');
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const timerIntervalRef = useRef<any>(null);
+
+  // Play gentle Web Audio chime
+  const playChime = () => {
+    if (!soundEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // Note 1 (528Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(528, now);
+      gain1.gain.setValueAtTime(0.3, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 1.2);
+
+      // Note 2 (660Hz - harmonic major third)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(660, now + 0.15);
+      gain2.gain.setValueAtTime(0.25, now + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.15);
+      osc2.stop(now + 1.5);
+    } catch (e) {
+      console.error('Audio chime failed:', e);
+    }
+  };
+
+  // Timer Tick
+  useEffect(() => {
+    if (isTimerRunning) {
+      timerIntervalRef.current = setInterval(() => {
+        setTimerSecondsRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerIntervalRef.current);
+            setIsTimerRunning(false);
+            playChime();
+
+            // Record completed focus minutes
+            const completedMins = timerDurationMinutes;
+            updateCurrentLog({
+              focusMinutes: (currentLog.focusMinutes || 0) + completedMins,
+            });
+
+            // If linked to a habit, update that habit's progress
+            if (linkedHabitId) {
+              const targetHabit = habits.find((h) => h.id === linkedHabitId);
+              if (targetHabit) {
+                const currentVal = currentLog.habitsProgress[linkedHabitId] || 0;
+                const nextVal = targetHabit.unit?.toLowerCase().includes('min')
+                  ? currentVal + completedMins
+                  : currentVal + 1;
+                updateCurrentLog({
+                  habitsProgress: {
+                    ...currentLog.habitsProgress,
+                    [linkedHabitId]: nextVal,
+                  },
+                });
+              }
+            }
+
+            alert(`${t.timerFinishedTitle} - ${completedMins} ${t.loggedMinutes}`);
+            return timerDurationMinutes * 60;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(timerIntervalRef.current);
+    }
+
+    return () => clearInterval(timerIntervalRef.current);
+  }, [isTimerRunning, timerDurationMinutes, linkedHabitId]);
+
+  const handleSetTimerPreset = (minutes: number) => {
+    setIsTimerRunning(false);
+    setTimerDurationMinutes(minutes);
+    setTimerSecondsRemaining(minutes * 60);
+  };
+
+  const handleToggleTimer = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const dummyCtx = new AudioCtx();
+        if (dummyCtx.state === 'suspended') {
+          dummyCtx.resume();
+        }
+      }
+    } catch (e) {}
+    setIsTimerRunning(!isTimerRunning);
+  };
+
+  const handleResetTimer = () => {
+    setIsTimerRunning(false);
+    setTimerSecondsRemaining(timerDurationMinutes * 60);
+  };
+
+  // Quick launch timer from a habit
+  const launchTimerForHabit = (habitId: string, defaultMinutes?: number) => {
+    setLinkedHabitId(habitId);
+    const mins = defaultMinutes || 25;
+    handleSetTimerPreset(mins);
+    setActiveTab('timer');
+  };
+
+  // ----------------------------------------------------
+  // PERSISTENCE & DATA
+  // ----------------------------------------------------
   useEffect(() => {
     const savedHabits = localStorage.getItem('tf_v2_habits');
     const savedLogs = localStorage.getItem('tf_v2_day_logs');
-    if (savedHabits) setHabits(JSON.parse(savedHabits));
+    if (savedHabits) {
+      setHabits(JSON.parse(savedHabits));
+    } else {
+      // Clean default habits
+      const defaults: Habit[] = [
+        { id: 'h1', name: 'Deep Work Sprint', type: 'Good', category: 'DeepWork', timeOfDay: 'DeepWork', targetValue: 50, unit: 'mins', createdAt: new Date().toISOString() },
+        { id: 'h2', name: 'Physical Fitness & Movement', type: 'Good', category: 'Fitness', timeOfDay: 'Morning', targetValue: 30, unit: 'mins', createdAt: new Date().toISOString() },
+        { id: 'h3', name: 'Technical Reading', type: 'Good', category: 'Mindset', timeOfDay: 'Evening', targetValue: 20, unit: 'pages', createdAt: new Date().toISOString() },
+      ];
+      setHabits(defaults);
+      localStorage.setItem('tf_v2_habits', JSON.stringify(defaults));
+    }
     if (savedLogs) setLogs(JSON.parse(savedLogs));
   }, []);
 
-  // Save Changes
   useEffect(() => {
-    localStorage.setItem('tf_v2_habits', JSON.stringify(habits));
+    if (habits.length > 0) {
+      localStorage.setItem('tf_v2_habits', JSON.stringify(habits));
+    }
   }, [habits]);
 
   useEffect(() => {
@@ -113,16 +276,21 @@ export const DailyNotebook: React.FC = () => {
         energy: 'Medium',
         journal: '',
         wins: [],
+        focusMinutes: 0,
         habitsProgress: {},
       }
     );
   }, [logs, selectedDate]);
 
   const updateCurrentLog = (updates: Partial<DayLog>) => {
-    setLogs((prev) => ({
-      ...prev,
-      [selectedDate]: { ...currentLog, ...updates },
-    }));
+    setLogs((prev) => {
+      const updated = {
+        ...prev,
+        [selectedDate]: { ...currentLog, ...updates },
+      };
+      localStorage.setItem('tf_v2_day_logs', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // Habit Toggle & Numeric Update
@@ -145,13 +313,17 @@ export const DailyNotebook: React.FC = () => {
     });
   };
 
-  // Streak Calculation for a Habit
+  // Streak Calculation
   const calculateStreak = (habitId: string) => {
     let streak = 0;
     const curr = new Date(selectedDate);
 
     while (true) {
-      const dateStr = curr.toISOString().split('T')[0];
+      const y = curr.getFullYear();
+      const m = String(curr.getMonth() + 1).padStart(2, '0');
+      const d = String(curr.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+
       const log = logs[dateStr];
       const target = habits.find((h) => h.id === habitId)?.targetValue || 1;
       const progress = log?.habitsProgress?.[habitId] || 0;
@@ -172,7 +344,7 @@ export const DailyNotebook: React.FC = () => {
     if (!habitForm.name.trim()) return;
 
     const newHabit: Habit = {
-      id: Date.now().toString(),
+      id: `h_${Date.now()}`,
       name: habitForm.name.trim(),
       type: habitForm.type,
       category: habitForm.category,
@@ -186,8 +358,8 @@ export const DailyNotebook: React.FC = () => {
     setHabitForm({
       name: '',
       type: 'Good',
-      category: 'Personal',
-      timeOfDay: 'Anytime',
+      category: 'DeepWork',
+      timeOfDay: 'Morning',
       targetValue: '',
       unit: '',
     });
@@ -214,15 +386,15 @@ export const DailyNotebook: React.FC = () => {
   const changeDate = (days: number) => {
     const curr = new Date(selectedDate);
     curr.setDate(curr.getDate() + days);
-    setSelectedDate(curr.toISOString().split('T')[0]);
+    const y = curr.getFullYear();
+    const m = String(curr.getMonth() + 1).padStart(2, '0');
+    const d = String(curr.getDate()).padStart(2, '0');
+    handleDateUpdate(`${y}-${m}-${d}`);
   };
 
   // Calculated Stats
-  const yearStr = selectedDate.substring(0, 4);
   const monthStr = selectedDate.substring(0, 7);
-
   const monthLogs = Object.values(logs).filter((l) => l.date.startsWith(monthStr));
-  const yearLogs = Object.values(logs).filter((l) => l.date.startsWith(yearStr));
 
   const totalHabitChecksToday = Object.values(currentLog.habitsProgress).filter(
     (val) => val > 0
@@ -237,142 +409,205 @@ export const DailyNotebook: React.FC = () => {
     0
   );
 
-  const totalYearChecks = yearLogs.reduce(
-    (acc, l) => acc + Object.values(l.habitsProgress || {}).filter((v) => v > 0).length,
-    0
-  );
-
-  // 7-Day Week Dates Generation for Weekly Matrix
+  // 7-Day Matrix Dates
   const weekDates = useMemo(() => {
     const curr = new Date(selectedDate);
     const day = curr.getDay();
-    const diff = curr.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
+    const diff = curr.getDate() - day + (day === 0 ? -6 : 1);
     const monday = new Date(curr.setDate(diff));
 
     const dates = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      dates.push(d.toISOString().split('T')[0]);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dateNum = String(d.getDate()).padStart(2, '0');
+      dates.push(`${y}-${m}-${dateNum}`);
     }
     return dates;
   }, [selectedDate]);
 
+  // Format timer digital display
+  const formatTimerDigits = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  // Category Badges
+  const CATEGORY_STYLES: Record<Category, { label: string; badge: string }> = {
+    Health: { label: t.catHealth, badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
+    Fitness: { label: t.catFitness, badge: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' },
+    DeepWork: { label: t.catDeepWork, badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
+    Mindset: { label: t.catMindset, badge: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' },
+    Personal: { label: t.catPersonal, badge: 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20' },
+    Systems: { label: t.catSystems, badge: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' },
+  };
+
+  // State Options (Replacing mediocre emojis)
+  const STATE_OPTIONS = [
+    { id: 'focus', label: t.stateDeepFocus, icon: Brain },
+    { id: 'peak', label: t.statePeakEnergy, icon: Zap },
+    { id: 'flow', label: t.stateOptimalFlow, icon: Target },
+    { id: 'calm', label: t.stateCalmExecution, icon: ShieldCheck },
+    { id: 'fatigue', label: t.stateFatigue, icon: Clock },
+    { id: 'overload', label: t.stateOverloaded, icon: Activity },
+  ];
+
+  const TIME_BLOCKS: { id: TimeOfDay; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'Morning', label: t.timeMorning, icon: Sunrise },
+    { id: 'DeepWork', label: t.timeDeepWork, icon: Brain },
+    { id: 'Afternoon', label: t.timeAfternoon, icon: Sun },
+    { id: 'Evening', label: t.timeEvening, icon: Moon },
+    { id: 'Anytime', label: t.timeAnytime, icon: Clock },
+  ];
+
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-4 sm:p-6 space-y-6">
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-5 sm:p-6 space-y-6" dir={dir}>
       {/* Top Header & Date Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white">
-            <Trophy className="w-5 h-5" />
+          <div className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
+            <Brain className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold tracking-tight">Daily OS & Habit System</h2>
-            <p className="text-xs text-zinc-400">Track habits, progress, and daily recaps</p>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+              {t.dailyOsTitle}
+            </h2>
+            <p className="text-xs text-zinc-400">
+              {t.dailyOsSubtitle}
+            </p>
           </div>
         </div>
 
+        {/* Date Stepper */}
         <div className="flex items-center justify-between sm:justify-end gap-2">
           <button
             onClick={() => changeDate(-1)}
-            className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+            aria-label="Previous Day"
+            className="p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
           </button>
           <input
             type="date"
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 cursor-pointer"
+            onChange={(e) => handleDateUpdate(e.target.value)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 cursor-pointer"
           />
           <button
             onClick={() => changeDate(1)}
-            className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+            aria-label="Next Day"
+            className="p-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
           </button>
         </div>
       </div>
 
       {/* Analytics Summary Banner */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
-          <span className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
-            <Target className="w-3.5 h-3.5 text-blue-500" /> Today's Completion
+        <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
+          <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <Target className="w-3.5 h-3.5 text-blue-500" /> {t.todayCompletion}
           </span>
           <div className="flex items-baseline justify-between">
-            <p className="text-lg font-bold">{todayCompletionRate}%</p>
-            <span className="text-[10px] text-zinc-400">
+            <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{todayCompletionRate}%</p>
+            <span className="text-[10px] text-zinc-400 font-medium">
               {totalHabitChecksToday}/{habits.length}
             </span>
           </div>
         </div>
 
-        <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
-          <span className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
-            <Flame className="w-3.5 h-3.5 text-amber-500" /> Active Habits
+        <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
+          <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <Flame className="w-3.5 h-3.5 text-amber-500" /> {t.activeHabitsCount}
           </span>
-          <p className="text-lg font-bold">{habits.length}</p>
+          <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{habits.length}</p>
         </div>
 
-        <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
-          <span className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-500" /> Monthly Checks
+        <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
+          <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <Timer className="w-3.5 h-3.5 text-indigo-500" /> {t.focusMinutesToday}
           </span>
-          <p className="text-lg font-bold">{totalMonthChecks}</p>
+          <div className="flex items-baseline gap-1">
+            <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{currentLog.focusMinutes || 0}</p>
+            <span className="text-[10px] text-zinc-400">mins</span>
+          </div>
         </div>
 
-        <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
-          <span className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
-            <Award className="w-3.5 h-3.5 text-purple-500" /> Yearly Progress
+        <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
+          <span className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <Award className="w-3.5 h-3.5 text-emerald-500" /> {t.monthlyStreakScore}
           </span>
-          <p className="text-lg font-bold">{totalYearChecks}</p>
+          <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{totalMonthChecks}</p>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2 text-xs">
+      <div className="flex items-center gap-1.5 border-b border-zinc-200 dark:border-zinc-800 pb-2 text-xs overflow-x-auto">
         <button
           onClick={() => setActiveTab('today')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
             activeTab === 'today'
-              ? 'bg-black dark:bg-white text-white dark:text-black'
+              ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
               : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
-          <CheckSquare className="w-3.5 h-3.5" /> Daily Focus
+          <CheckSquare className="w-3.5 h-3.5" />
+          <span>{t.dailyFocus}</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('timer')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
+            activeTab === 'timer'
+              ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
+              : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+          }`}
+        >
+          <Timer className="w-3.5 h-3.5" />
+          <span>{t.focusTimer}</span>
+          {isTimerRunning && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          )}
+        </button>
+
         <button
           onClick={() => setActiveTab('weekly')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
             activeTab === 'weekly'
-              ? 'bg-black dark:bg-white text-white dark:text-black'
+              ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
               : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
-          <LayoutGrid className="w-3.5 h-3.5" /> Weekly Grid
+          <LayoutGrid className="w-3.5 h-3.5" />
+          <span>{t.weeklyGrid}</span>
         </button>
+
         <button
           onClick={() => setActiveTab('manage')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
             activeTab === 'manage'
-              ? 'bg-black dark:bg-white text-white dark:text-black'
+              ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
               : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
-          <Plus className="w-3.5 h-3.5" /> Manage Habits
+          <Plus className="w-3.5 h-3.5" />
+          <span>{t.manageHabits}</span>
         </button>
       </div>
 
-      {/* TAB 1: DAILY FOCUS */}
+      {/* TAB 1: DAILY EXECUTION */}
       {activeTab === 'today' && (
         <div className="space-y-6">
-          {/* Mood, Energy, & Day Rating */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl">
-            {/* Rating */}
+          {/* Mental State & Energy Check-in */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 rounded-xl">
+            {/* Day Rating */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase text-zinc-400 flex items-center gap-1">
-                <Star className="w-3 h-3 text-amber-500" /> Day Rating
+              <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <Star className="w-3.5 h-3.5 text-amber-500" /> {t.dayRating}
               </label>
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -394,164 +629,183 @@ export const DailyNotebook: React.FC = () => {
               </div>
             </div>
 
-            {/* Mood */}
+            {/* Mindset / State */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase text-zinc-400 flex items-center gap-1">
-                <Smile className="w-3 h-3 text-emerald-500" /> Mood
+              <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <Brain className="w-3.5 h-3.5 text-blue-500" /> {t.stateAndMindset}
               </label>
               <select
                 value={currentLog.mood || ''}
                 onChange={(e) => updateCurrentLog({ mood: e.target.value })}
-                className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer"
+                className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer text-zinc-800 dark:text-zinc-200 font-medium"
               >
-                <option value="">Select Mood...</option>
-                {MOOD_OPTIONS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
+                <option value="">Select State...</option>
+                {STATE_OPTIONS.map((st) => (
+                  <option key={st.id} value={st.label}>
+                    {st.label}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Energy */}
+            {/* Energy Level */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase text-zinc-400 flex items-center gap-1">
-                <Zap className="w-3 h-3 text-purple-500" /> Energy Level
+              <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-500" /> {t.energyLevel}
               </label>
-              <div className="flex gap-1">
-                {(['Low', 'Medium', 'High'] as const).map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => updateCurrentLog({ energy: level })}
-                    className={`flex-1 text-xs py-1.5 rounded-lg font-medium border transition cursor-pointer ${
-                      currentLog.energy === level
-                        ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
-                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500'
-                    }`}
-                  >
-                    {level}
-                  </button>
-                ))}
+              <div className="flex gap-1.5">
+                {(['Low', 'Medium', 'High'] as const).map((level) => {
+                  const labelMap = {
+                    Low: t.energyLow,
+                    Medium: t.energyMedium,
+                    High: t.energyHigh,
+                  };
+                  const isSelected = currentLog.energy === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => updateCurrentLog({ energy: level })}
+                      className={`flex-1 text-xs py-1.5 rounded-lg font-semibold border transition cursor-pointer ${
+                        isSelected
+                          ? 'bg-black dark:bg-white text-white dark:text-black border-transparent shadow-xs'
+                          : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-300'
+                      }`}
+                    >
+                      {labelMap[level]}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* Grouped Habit Checklist by Time of Day */}
+          {/* Grouped Routine Checklist by Time Block */}
           <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-              Habits Checklist
+            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              {t.habitsChecklist}
             </h3>
 
             {habits.length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl space-y-2">
-                <p className="text-xs text-zinc-400">No habits added yet.</p>
+              <div className="text-center py-8 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-2">
+                <p className="text-xs text-zinc-400">{t.noHabitsConfigured}</p>
                 <button
                   onClick={() => setActiveTab('manage')}
-                  className="text-xs font-medium underline text-black dark:text-white"
+                  className="text-xs font-semibold underline text-black dark:text-white cursor-pointer"
                 >
-                  Create your first habit
+                  {t.createFirstHabit}
                 </button>
               </div>
             ) : (
-              (['Morning', 'Afternoon', 'Evening', 'Anytime'] as TimeOfDay[]).map((time) => {
-                const groupHabits = habits.filter((h) => h.timeOfDay === time);
+              TIME_BLOCKS.map((block) => {
+                const groupHabits = habits.filter((h) => h.timeOfDay === block.id);
                 if (groupHabits.length === 0) return null;
+                const BlockIcon = block.icon;
 
                 return (
-                  <div key={time} className="space-y-2">
-                    <span className="text-[11px] font-semibold text-zinc-500 flex items-center gap-1.5">
-                      {time === 'Morning' && '🌅 Morning'}
-                      {time === 'Afternoon' && '☀️ Afternoon'}
-                      {time === 'Evening' && '🌙 Evening'}
-                      {time === 'Anytime' && '⏱️ Anytime'}
+                  <div key={block.id} className="space-y-2">
+                    <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 uppercase tracking-wider">
+                      <BlockIcon className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>{block.label}</span>
                     </span>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {groupHabits.map((habit) => {
                         const progress = currentLog.habitsProgress[habit.id] || 0;
                         const target = habit.targetValue || 1;
                         const isDone = progress >= target;
                         const streak = calculateStreak(habit.id);
+                        const catStyle = CATEGORY_STYLES[habit.category] || CATEGORY_STYLES.Personal;
 
                         return (
                           <div
                             key={habit.id}
-                            className={`p-3 rounded-xl border transition flex flex-col justify-between gap-2 ${
+                            className={`p-3.5 rounded-xl border transition flex flex-col justify-between gap-2.5 ${
                               isDone
-                                ? 'bg-zinc-100 dark:bg-zinc-800/60 border-zinc-300 dark:border-zinc-700'
-                                : 'bg-zinc-50/50 dark:bg-zinc-950/50 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300'
+                                ? 'bg-zinc-100/90 dark:bg-zinc-800/60 border-zinc-300 dark:border-zinc-700'
+                                : 'bg-zinc-50/60 dark:bg-zinc-950/50 border-zinc-200/80 dark:border-zinc-800 hover:border-zinc-300'
                             }`}
                           >
                             <div className="flex items-center justify-between gap-2">
+                              {/* Habit Check Toggle */}
                               <div
-                                className="flex items-center gap-2 cursor-pointer overflow-hidden"
+                                className="flex items-center gap-2.5 cursor-pointer overflow-hidden"
                                 onClick={() => handleHabitProgress(habit)}
                               >
                                 {habit.type === 'Good' && (
                                   <CheckCircle2
-                                    className={`w-4 h-4 shrink-0 ${
+                                    className={`w-4.5 h-4.5 shrink-0 transition ${
                                       isDone
-                                        ? 'text-emerald-500 fill-emerald-500/20'
-                                        : 'text-zinc-400'
+                                        ? 'text-emerald-600 fill-emerald-600/20'
+                                        : 'text-zinc-400 hover:text-black dark:hover:text-white'
                                     }`}
                                   />
                                 )}
                                 {habit.type === 'Bad' && (
                                   <XCircle
-                                    className={`w-4 h-4 shrink-0 ${
+                                    className={`w-4.5 h-4.5 shrink-0 transition ${
                                       isDone ? 'text-rose-500 fill-rose-500/20' : 'text-zinc-400'
                                     }`}
                                   />
                                 )}
                                 {habit.type === 'Normal' && (
                                   <Activity
-                                    className={`w-4 h-4 shrink-0 ${
+                                    className={`w-4.5 h-4.5 shrink-0 transition ${
                                       isDone ? 'text-blue-500' : 'text-zinc-400'
                                     }`}
                                   />
                                 )}
                                 <span
-                                  className={`text-xs font-medium truncate ${
-                                    isDone ? 'line-through text-zinc-400' : ''
+                                  className={`text-xs font-semibold truncate ${
+                                    isDone ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-zinc-100'
                                   }`}
                                 >
                                   {habit.name}
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-1.5">
-                                <span
-                                  className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium border ${
-                                    CATEGORY_COLORS[habit.category]
-                                  }`}
+                              {/* Habit metadata pills & quick timer launch */}
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => launchTimerForHabit(habit.id, habit.targetValue && habit.unit?.includes('min') ? habit.targetValue : 25)}
+                                  className="w-7 h-7 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 flex items-center justify-center transition cursor-pointer active:scale-90"
+                                  title="Start Focus Timer for this routine"
                                 >
-                                  {habit.category}
+                                  <Timer className="w-3.5 h-3.5" />
+                                </button>
+
+                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${catStyle.badge}`}>
+                                  {catStyle.label}
                                 </span>
+
                                 {streak > 0 && (
                                   <span className="text-[10px] font-bold text-amber-500 flex items-center gap-0.5">
-                                    <Flame className="w-3 h-3 fill-amber-500" /> {streak}
+                                    <Flame className="w-3 h-3 fill-amber-500" />
+                                    <span>{streak}</span>
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            {/* Numeric Progress Controls (If Applicable) */}
+                            {/* Numeric Progress Controls */}
                             {habit.targetValue && (
                               <div className="flex items-center justify-between pt-2 border-t border-zinc-200/60 dark:border-zinc-800 text-xs">
-                                <span className="text-[10px] text-zinc-400">
+                                <span className="text-[10px] font-medium text-zinc-400">
                                   {progress} / {habit.targetValue} {habit.unit}
                                 </span>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1.5">
                                   <button
+                                    type="button"
                                     onClick={() => handleHabitProgress(habit, -1)}
-                                    className="px-2 py-0.5 bg-zinc-200 dark:bg-zinc-800 rounded-md font-bold hover:bg-zinc-300 dark:hover:bg-zinc-700 cursor-pointer"
+                                    className="w-7 h-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 font-bold flex items-center justify-center hover:bg-zinc-300 dark:hover:bg-zinc-700 active:scale-90 cursor-pointer text-xs"
                                   >
                                     -
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={() => handleHabitProgress(habit, 1)}
-                                    className="px-2 py-0.5 bg-black dark:bg-white text-white dark:text-black rounded-md font-bold hover:opacity-80 cursor-pointer"
+                                    className="w-7 h-7 rounded-lg bg-black dark:bg-white text-white dark:text-black font-bold flex items-center justify-center hover:opacity-80 active:scale-90 cursor-pointer text-xs"
                                   >
                                     +
                                   </button>
@@ -568,25 +822,26 @@ export const DailyNotebook: React.FC = () => {
             )}
           </div>
 
-          {/* Daily Wins Section */}
+          {/* Daily Wins & Key Results */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Daily Wins & Highlights
+            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>{t.dailyWinsTitle}</span>
             </h3>
 
             <form onSubmit={handleAddWin} className="flex gap-2">
               <input
                 type="text"
-                placeholder="What went well today?"
+                placeholder={t.addWinPlaceholder}
                 value={newWinInput}
                 onChange={(e) => setNewWinInput(e.target.value)}
                 className="flex-1 text-xs px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:outline-none"
               />
               <button
                 type="submit"
-                className="px-3 py-2 text-xs font-semibold bg-black dark:bg-white text-white dark:text-black rounded-xl hover:opacity-90 transition cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold bg-black dark:bg-white text-white dark:text-black rounded-xl hover:opacity-90 transition cursor-pointer shadow-xs"
               >
-                Add
+                {t.addWinButton}
               </button>
             </form>
 
@@ -595,14 +850,15 @@ export const DailyNotebook: React.FC = () => {
                 {currentLog.wins.map((win, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800/80 text-xs"
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 text-xs font-medium"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="text-amber-500">🏆</span> {win}
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>{win}</span>
                     </span>
                     <button
                       onClick={() => removeWin(idx)}
-                      className="text-zinc-400 hover:text-rose-500 transition cursor-pointer"
+                      className="text-zinc-400 hover:text-rose-500 transition cursor-pointer p-0.5"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -612,37 +868,146 @@ export const DailyNotebook: React.FC = () => {
             )}
           </div>
 
-          {/* Daily Journal Note */}
+          {/* Daily Executive Journal & Reflection */}
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-              Daily Journal & Notes
+            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              {t.dailyJournalTitle}
             </h3>
             <textarea
               rows={3}
               value={currentLog.journal}
               onChange={(e) => updateCurrentLog({ journal: e.target.value })}
-              placeholder="Reflect on your day, learnings, or thoughts..."
-              className="w-full text-xs p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white resize-none"
+              placeholder={t.dailyJournalPlaceholder}
+              className="w-full text-xs p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white resize-none"
             />
           </div>
         </div>
       )}
 
-      {/* TAB 2: WEEKLY MATRIX */}
+      {/* TAB 2: SPECIFIC FOCUS TIMER SYSTEM */}
+      {activeTab === 'timer' && (
+        <div className="space-y-6 max-w-xl mx-auto py-4">
+          <div className="text-center space-y-1">
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+              {t.timerTitle}
+            </h3>
+            <p className="text-xs text-zinc-400">
+              {t.timerSubtitle}
+            </p>
+          </div>
+
+          {/* Presets Row */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: t.pomodoro25, mins: 25 },
+              { label: t.deepWork50, mins: 50 },
+              { label: t.quickSprint15, mins: 15 },
+              { label: t.shortBreak5, mins: 5 },
+            ].map((preset) => {
+              const isSelected = timerDurationMinutes === preset.mins;
+              return (
+                <button
+                  key={preset.mins}
+                  type="button"
+                  onClick={() => handleSetTimerPreset(preset.mins)}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                    isSelected
+                      ? 'bg-black text-white dark:bg-white dark:text-black border-transparent shadow-xs'
+                      : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Digital Timer Readout Container */}
+          <div className="p-8 rounded-3xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center space-y-5 shadow-xs">
+            <div className="text-5xl sm:text-6xl font-extrabold tracking-tight font-mono text-zinc-900 dark:text-zinc-50">
+              {formatTimerDigits(timerSecondsRemaining)}
+            </div>
+
+            {/* Linked Habit Indicator */}
+            <div className="w-full max-w-xs space-y-1 text-center">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                {t.linkHabit}
+              </label>
+              <select
+                value={linkedHabitId}
+                onChange={(e) => setLinkedHabitId(e.target.value)}
+                className="w-full text-xs px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer text-zinc-700 dark:text-zinc-300"
+              >
+                <option value="">{t.selectHabitToTrack}</option>
+                {habits.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name} {h.unit ? `(${h.unit})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Timer Controls */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleToggleTimer}
+                className={`px-6 py-3 rounded-2xl font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md ${
+                  isTimerRunning
+                    ? 'bg-amber-500 text-white hover:bg-amber-600'
+                    : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
+                }`}
+              >
+                {isTimerRunning ? (
+                  <>
+                    <Pause className="w-4 h-4" />
+                    <span>{t.pauseTimer}</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    <span>{t.startTimer}</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetTimer}
+                aria-label={t.resetTimer}
+                className="p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className="p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white transition cursor-pointer"
+                title={soundEnabled ? 'Mute audio chime' : 'Enable audio chime'}
+              >
+                {soundEnabled ? <Volume2 className="w-4 h-4 text-emerald-500" /> : <VolumeX className="w-4 h-4 text-zinc-400" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: WEEKLY MATRIX */}
       {activeTab === 'weekly' && (
         <div className="space-y-4">
-          <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-            7-Day Completion Matrix
+          <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+            {t.weeklyGrid}
           </h3>
 
           {habits.length === 0 ? (
-            <p className="text-xs text-zinc-400 text-center py-6">No habits configured yet.</p>
+            <p className="text-xs text-zinc-400 text-center py-6">{t.noHabitsConfigured}</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                    <th className="py-2 px-3 font-semibold text-zinc-400">Habit</th>
+                  <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                    <th className="py-2.5 px-4 font-semibold text-zinc-400">Routine</th>
                     {weekDates.map((date) => {
                       const d = new Date(date);
                       const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
@@ -652,8 +1017,9 @@ export const DailyNotebook: React.FC = () => {
                       return (
                         <th
                           key={date}
-                          className={`py-2 px-2 text-center font-medium ${
-                            isSelected ? 'text-black dark:text-white font-bold' : 'text-zinc-400'
+                          onClick={() => handleDateUpdate(date)}
+                          className={`py-2 px-2 text-center cursor-pointer transition ${
+                            isSelected ? 'bg-zinc-200/70 dark:bg-zinc-800/80 font-bold' : 'text-zinc-400 hover:text-black dark:hover:text-white'
                           }`}
                         >
                           <div>{dayName}</div>
@@ -663,10 +1029,10 @@ export const DailyNotebook: React.FC = () => {
                     })}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                   {habits.map((habit) => (
-                    <tr key={habit.id}>
-                      <td className="py-3 px-3 font-medium truncate max-w-[140px]">
+                    <tr key={habit.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition">
+                      <td className="py-3 px-4 font-semibold truncate max-w-[160px] text-zinc-900 dark:text-zinc-100">
                         {habit.name}
                       </td>
                       {weekDates.map((date) => {
@@ -678,11 +1044,11 @@ export const DailyNotebook: React.FC = () => {
                         return (
                           <td key={date} className="py-3 px-2 text-center">
                             <span
-                              className={`inline-block w-5 h-5 rounded-md ${
+                              className={`inline-block w-5 h-5 rounded-md transition ${
                                 isDone
-                                  ? 'bg-emerald-500 text-white'
+                                  ? 'bg-emerald-500 ring-2 ring-emerald-500/20'
                                   : progress > 0
-                                  ? 'bg-amber-400 text-white'
+                                  ? 'bg-amber-400'
                                   : 'bg-zinc-100 dark:bg-zinc-800'
                               }`}
                             />
@@ -698,26 +1064,26 @@ export const DailyNotebook: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: MANAGE HABITS */}
+      {/* TAB 4: MANAGE HABITS */}
       {activeTab === 'manage' && (
         <div className="space-y-6">
           <form
             onSubmit={handleAddHabit}
             className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl space-y-4"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-              Create New Habit
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
+              {t.newHabitHeading}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1">
-                  Habit Name *
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
+                  {t.habitNameLabel} *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Drink Water, Read Book..."
+                  placeholder={t.habitNamePlaceholder}
                   value={habitForm.name}
                   onChange={(e) => setHabitForm({ ...habitForm, name: e.target.value })}
                   className="w-full text-xs px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:outline-none"
@@ -725,8 +1091,8 @@ export const DailyNotebook: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1">
-                  Type
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
+                  {t.habitTypeLabel}
                 </label>
                 <select
                   value={habitForm.type}
@@ -735,15 +1101,15 @@ export const DailyNotebook: React.FC = () => {
                   }
                   className="w-full text-xs px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer"
                 >
-                  <option value="Good">Good (+)</option>
-                  <option value="Normal">Normal</option>
-                  <option value="Bad">Bad (-)</option>
+                  <option value="Good">{t.typeGood}</option>
+                  <option value="Normal">{t.typeNeutral}</option>
+                  <option value="Bad">{t.typeBreak}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1">
-                  Category
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
+                  {t.categoryLabel}
                 </label>
                 <select
                   value={habitForm.category}
@@ -752,17 +1118,18 @@ export const DailyNotebook: React.FC = () => {
                   }
                   className="w-full text-xs px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer"
                 >
-                  <option value="Health">Health</option>
-                  <option value="Fitness">Fitness</option>
-                  <option value="Mindset">Mindset</option>
-                  <option value="Work">Work</option>
-                  <option value="Personal">Personal</option>
+                  <option value="DeepWork">{t.catDeepWork}</option>
+                  <option value="Health">{t.catHealth}</option>
+                  <option value="Fitness">{t.catFitness}</option>
+                  <option value="Mindset">{t.catMindset}</option>
+                  <option value="Personal">{t.catPersonal}</option>
+                  <option value="Systems">{t.catSystems}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1">
-                  Time of Day
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
+                  {t.timeBlockLabel}
                 </label>
                 <select
                   value={habitForm.timeOfDay}
@@ -771,20 +1138,21 @@ export const DailyNotebook: React.FC = () => {
                   }
                   className="w-full text-xs px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer"
                 >
-                  <option value="Morning">Morning</option>
-                  <option value="Afternoon">Afternoon</option>
-                  <option value="Evening">Evening</option>
-                  <option value="Anytime">Anytime</option>
+                  <option value="Morning">{t.timeMorning}</option>
+                  <option value="DeepWork">{t.timeDeepWork}</option>
+                  <option value="Afternoon">{t.timeAfternoon}</option>
+                  <option value="Evening">{t.timeEvening}</option>
+                  <option value="Anytime">{t.timeAnytime}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1">
-                  Numeric Target (Optional)
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
+                  {t.targetValueLabel}
                 </label>
                 <input
                   type="number"
-                  placeholder="e.g. 2000 or 20"
+                  placeholder="e.g. 50 or 20"
                   value={habitForm.targetValue}
                   onChange={(e) =>
                     setHabitForm({ ...habitForm, targetValue: e.target.value })
@@ -794,12 +1162,12 @@ export const DailyNotebook: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1">
-                  Unit (Optional)
+                <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
+                  {t.targetUnitLabel}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. ml, pages, mins"
+                  placeholder="e.g. mins, pages, ml"
                   value={habitForm.unit}
                   onChange={(e) => setHabitForm({ ...habitForm, unit: e.target.value })}
                   className="w-full text-xs px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:outline-none"
@@ -809,31 +1177,32 @@ export const DailyNotebook: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full text-xs py-2 bg-black dark:bg-white text-white dark:text-black font-semibold rounded-lg hover:opacity-90 transition cursor-pointer"
+              className="w-full text-xs py-2.5 bg-black dark:bg-white text-white dark:text-black font-semibold rounded-xl hover:opacity-90 transition cursor-pointer shadow-xs"
             >
-              Add Habit
+              {t.addHabitSubmit}
             </button>
           </form>
 
           {/* Active Habits List */}
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-              Active Habits ({habits.length})
+            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              {t.activeHabitsCount} ({habits.length})
             </h3>
             <div className="space-y-2">
               {habits.map((habit) => (
                 <div
                   key={habit.id}
-                  className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs"
+                  className="flex items-center justify-between p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs"
                 >
                   <div>
-                    <p className="font-semibold">{habit.name}</p>
-                    <p className="text-[10px] text-zinc-400">
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-100">{habit.name}</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">
                       {habit.timeOfDay} • {habit.category} {habit.targetValue ? `• ${habit.targetValue} ${habit.unit}` : ''}
                     </p>
                   </div>
                   <button
                     onClick={() => deleteHabit(habit.id)}
+                    aria-label={t.deleteHabitConfirm}
                     className="p-1.5 text-zinc-400 hover:text-rose-500 transition cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />

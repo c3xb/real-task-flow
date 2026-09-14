@@ -24,6 +24,11 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, select, input, [role="button"] {
+  touch-action: manipulation;
 }
 
 html {
