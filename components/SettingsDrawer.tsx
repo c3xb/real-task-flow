@@ -65,8 +65,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose 
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-black/60"
             onClick={onClose}
           />
 
@@ -81,9 +85,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose 
             animate={{ x: 0 }}
             exit={{ x: isRtl ? '-100%' : '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className={`fixed top-0 z-50 h-full w-96 max-w-[92vw] bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col ${
-              isRtl ? 'left-0 border-r' : 'right-0 border-l'
-            }`}
+            className={`fixed top-0 z-50 h-full w-96 max-w-[92vw] bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col ${isRtl ? 'left-0 border-r' : 'right-0 border-l'
+              }`}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
@@ -158,9 +161,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose 
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div
-                              className={`w-7 h-7 rounded-lg bg-gradient-to-br ${
-                                ws.colorGradient || 'from-indigo-500 to-blue-600'
-                              } flex items-center justify-center text-white shrink-0 shadow-2xs`}
+                              className={`w-7 h-7 rounded-lg bg-gradient-to-br ${ws.colorGradient || 'from-indigo-500 to-blue-600'
+                                } flex items-center justify-center text-white shrink-0 shadow-2xs`}
                             >
                               <FolderKanban className="w-3.5 h-3.5" />
                             </div>
@@ -207,11 +209,10 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose 
                         key={lang.code}
                         type="button"
                         onClick={() => setLocale(lang.code)}
-                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer active:scale-[0.98] ${
-                          isActive
+                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer active:scale-[0.98] ${isActive
                             ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
                             : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/60'
-                        }`}
+                          }`}
                       >
                         <span className="text-base">{lang.flag}</span>
                         <span className="font-semibold">{t[lang.labelKey]}</span>

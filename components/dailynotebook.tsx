@@ -218,7 +218,7 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
           dummyCtx.resume();
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     setIsTimerRunning(!isTimerRunning);
   };
 
@@ -243,15 +243,6 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
     const savedLogs = localStorage.getItem('tf_v2_day_logs');
     if (savedHabits) {
       setHabits(JSON.parse(savedHabits));
-    } else {
-      // Clean default habits
-      const defaults: Habit[] = [
-        { id: 'h1', name: 'Deep Work Sprint', type: 'Good', category: 'DeepWork', timeOfDay: 'DeepWork', targetValue: 50, unit: 'mins', createdAt: new Date().toISOString() },
-        { id: 'h2', name: 'Physical Fitness & Movement', type: 'Good', category: 'Fitness', timeOfDay: 'Morning', targetValue: 30, unit: 'mins', createdAt: new Date().toISOString() },
-        { id: 'h3', name: 'Technical Reading', type: 'Good', category: 'Mindset', timeOfDay: 'Evening', targetValue: 20, unit: 'pages', createdAt: new Date().toISOString() },
-      ];
-      setHabits(defaults);
-      localStorage.setItem('tf_v2_habits', JSON.stringify(defaults));
     }
     if (savedLogs) setLogs(JSON.parse(savedLogs));
   }, []);
@@ -549,11 +540,10 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
       <div className="flex items-center gap-1.5 border-b border-zinc-200 dark:border-zinc-800 pb-2 text-xs overflow-x-auto">
         <button
           onClick={() => setActiveTab('today')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
-            activeTab === 'today'
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${activeTab === 'today'
               ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
               : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-          }`}
+            }`}
         >
           <CheckSquare className="w-3.5 h-3.5" />
           <span>{t.dailyFocus}</span>
@@ -561,11 +551,10 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
 
         <button
           onClick={() => setActiveTab('timer')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
-            activeTab === 'timer'
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${activeTab === 'timer'
               ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
               : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-          }`}
+            }`}
         >
           <Timer className="w-3.5 h-3.5" />
           <span>{t.focusTimer}</span>
@@ -576,11 +565,10 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
 
         <button
           onClick={() => setActiveTab('weekly')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
-            activeTab === 'weekly'
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${activeTab === 'weekly'
               ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
               : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-          }`}
+            }`}
         >
           <LayoutGrid className="w-3.5 h-3.5" />
           <span>{t.weeklyGrid}</span>
@@ -588,11 +576,10 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
 
         <button
           onClick={() => setActiveTab('manage')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${
-            activeTab === 'manage'
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer ${activeTab === 'manage'
               ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
               : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-          }`}
+            }`}
         >
           <Plus className="w-3.5 h-3.5" />
           <span>{t.manageHabits}</span>
@@ -618,11 +605,10 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
                     className="p-1 cursor-pointer transition transform hover:scale-110 active:scale-95"
                   >
                     <Star
-                      className={`w-5 h-5 ${
-                        star <= currentLog.rating
+                      className={`w-5 h-5 ${star <= currentLog.rating
                           ? 'fill-amber-400 text-amber-400'
                           : 'text-zinc-300 dark:text-zinc-700'
-                      }`}
+                        }`}
                     />
                   </button>
                 ))}
@@ -666,11 +652,10 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
                       key={level}
                       type="button"
                       onClick={() => updateCurrentLog({ energy: level })}
-                      className={`flex-1 text-xs py-1.5 rounded-lg font-semibold border transition cursor-pointer ${
-                        isSelected
+                      className={`flex-1 text-xs py-1.5 rounded-lg font-semibold border transition cursor-pointer ${isSelected
                           ? 'bg-black dark:bg-white text-white dark:text-black border-transparent shadow-xs'
                           : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-300'
-                      }`}
+                        }`}
                     >
                       {labelMap[level]}
                     </button>
@@ -720,11 +705,10 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
                         return (
                           <div
                             key={habit.id}
-                            className={`p-3.5 rounded-xl border transition flex flex-col justify-between gap-2.5 ${
-                              isDone
+                            className={`p-3.5 rounded-xl border transition flex flex-col justify-between gap-2.5 ${isDone
                                 ? 'bg-zinc-100/90 dark:bg-zinc-800/60 border-zinc-300 dark:border-zinc-700'
                                 : 'bg-zinc-50/60 dark:bg-zinc-950/50 border-zinc-200/80 dark:border-zinc-800 hover:border-zinc-300'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center justify-between gap-2">
                               {/* Habit Check Toggle */}
@@ -734,31 +718,27 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
                               >
                                 {habit.type === 'Good' && (
                                   <CheckCircle2
-                                    className={`w-4.5 h-4.5 shrink-0 transition ${
-                                      isDone
+                                    className={`w-4.5 h-4.5 shrink-0 transition ${isDone
                                         ? 'text-emerald-600 fill-emerald-600/20'
                                         : 'text-zinc-400 hover:text-black dark:hover:text-white'
-                                    }`}
+                                      }`}
                                   />
                                 )}
                                 {habit.type === 'Bad' && (
                                   <XCircle
-                                    className={`w-4.5 h-4.5 shrink-0 transition ${
-                                      isDone ? 'text-rose-500 fill-rose-500/20' : 'text-zinc-400'
-                                    }`}
+                                    className={`w-4.5 h-4.5 shrink-0 transition ${isDone ? 'text-rose-500 fill-rose-500/20' : 'text-zinc-400'
+                                      }`}
                                   />
                                 )}
                                 {habit.type === 'Normal' && (
                                   <Activity
-                                    className={`w-4.5 h-4.5 shrink-0 transition ${
-                                      isDone ? 'text-blue-500' : 'text-zinc-400'
-                                    }`}
+                                    className={`w-4.5 h-4.5 shrink-0 transition ${isDone ? 'text-blue-500' : 'text-zinc-400'
+                                      }`}
                                   />
                                 )}
                                 <span
-                                  className={`text-xs font-semibold truncate ${
-                                    isDone ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-zinc-100'
-                                  }`}
+                                  className={`text-xs font-semibold truncate ${isDone ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-zinc-100'
+                                    }`}
                                 >
                                   {habit.name}
                                 </span>
@@ -910,11 +890,10 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
                   key={preset.mins}
                   type="button"
                   onClick={() => handleSetTimerPreset(preset.mins)}
-                  className={`py-2 px-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                    isSelected
+                  className={`py-2 px-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${isSelected
                       ? 'bg-black text-white dark:bg-white dark:text-black border-transparent shadow-xs'
                       : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300'
-                  }`}
+                    }`}
                 >
                   {preset.label}
                 </button>
@@ -952,11 +931,10 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
               <button
                 type="button"
                 onClick={handleToggleTimer}
-                className={`px-6 py-3 rounded-2xl font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md ${
-                  isTimerRunning
+                className={`px-6 py-3 rounded-2xl font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md ${isTimerRunning
                     ? 'bg-amber-500 text-white hover:bg-amber-600'
                     : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
-                }`}
+                  }`}
               >
                 {isTimerRunning ? (
                   <>
@@ -1018,9 +996,8 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
                         <th
                           key={date}
                           onClick={() => handleDateUpdate(date)}
-                          className={`py-2 px-2 text-center cursor-pointer transition ${
-                            isSelected ? 'bg-zinc-200/70 dark:bg-zinc-800/80 font-bold' : 'text-zinc-400 hover:text-black dark:hover:text-white'
-                          }`}
+                          className={`py-2 px-2 text-center cursor-pointer transition ${isSelected ? 'bg-zinc-200/70 dark:bg-zinc-800/80 font-bold' : 'text-zinc-400 hover:text-black dark:hover:text-white'
+                            }`}
                         >
                           <div>{dayName}</div>
                           <div className="text-[10px]">{dayNum}</div>
@@ -1044,13 +1021,12 @@ export const DailyNotebook: React.FC<DailyNotebookProps> = ({
                         return (
                           <td key={date} className="py-3 px-2 text-center">
                             <span
-                              className={`inline-block w-5 h-5 rounded-md transition ${
-                                isDone
+                              className={`inline-block w-5 h-5 rounded-md transition ${isDone
                                   ? 'bg-emerald-500 ring-2 ring-emerald-500/20'
                                   : progress > 0
-                                  ? 'bg-amber-400'
-                                  : 'bg-zinc-100 dark:bg-zinc-800'
-                              }`}
+                                    ? 'bg-amber-400'
+                                    : 'bg-zinc-100 dark:bg-zinc-800'
+                                }`}
                             />
                           </td>
                         );

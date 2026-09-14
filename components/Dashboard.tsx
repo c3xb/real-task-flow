@@ -28,9 +28,13 @@ interface Task {
   status: 'In Progress' | 'Pending' | 'Completed';
 }
 
+// The blocking script in layout.tsx already applies the 'dark' class
+// to <html> before hydration, so read it back here instead of
+// defaulting to false — avoids a flash of the wrong theme/icon.
+
+
 export const Dashboard: React.FC = () => {
-  const [darkMode, setDarkMode] = useState<boolean>(false);
-  const [mounted, setMounted] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<'All' | 'Pending' | 'Completed'>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -45,18 +49,6 @@ export const Dashboard: React.FC = () => {
   const { t, dir } = useLanguage();
 
   useEffect(() => {
-    setMounted(true);
-    const storedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    if (storedTheme === 'dark' || (!storedTheme && systemPrefersDark)) {
-      setDarkMode(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setDarkMode(false);
-      document.documentElement.classList.remove('dark');
-    }
-
     const savedTasks = localStorage.getItem('tf_dashboard_tasks');
     if (savedTasks) {
       try {
@@ -64,13 +56,6 @@ export const Dashboard: React.FC = () => {
       } catch (e) {
         console.error(e);
       }
-    } else {
-      const defaultTasks: Task[] = [
-        { id: '1', title: 'Complete project roadmap architecture', dueDate: new Date().toISOString().split('T')[0], priority: 'High', status: 'In Progress' },
-        { id: '2', title: 'Review weekly habit metrics & reflections', dueDate: new Date().toISOString().split('T')[0], priority: 'Medium', status: 'Pending' },
-      ];
-      setTasks(defaultTasks);
-      localStorage.setItem('tf_dashboard_tasks', JSON.stringify(defaultTasks));
     }
   }, []);
 
@@ -82,6 +67,14 @@ export const Dashboard: React.FC = () => {
       return next;
     });
   };
+
+
+  // Read current theme from DOM/localStorage on initial client mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const isDark = savedTheme === 'dark' || document.documentElement.classList.contains('dark');
+    setDarkMode(isDark);
+  }, []);
 
   const toggleTheme = () => {
     const isDark = !darkMode;
@@ -220,7 +213,7 @@ export const Dashboard: React.FC = () => {
               aria-label={t.toggleTheme}
               className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all duration-200 active:scale-95 cursor-pointer"
             >
-              {mounted && darkMode ? (
+              {darkMode ? (
                 <Sun className="w-5 h-5 text-amber-400 transition-transform duration-300 rotate-0 hover:rotate-45" />
               ) : (
                 <Moon className="w-5 h-5 text-zinc-800 transition-transform duration-300 rotate-0 hover:-rotate-12" />
@@ -314,8 +307,8 @@ export const Dashboard: React.FC = () => {
                     key={tab}
                     onClick={() => setFilter(tab)}
                     className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer active:scale-95 ${filter === tab
-                        ? 'bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white'
+                      ? 'bg-white dark:bg-zinc-800 text-black dark:text-white shadow-xs'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white'
                       }`}
                   >
                     {filterLabel(tab)}
@@ -337,8 +330,8 @@ export const Dashboard: React.FC = () => {
                       type="button"
                       onClick={() => handleToggleTask(task.id)}
                       className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer shrink-0 ${task.status === 'Completed'
-                          ? 'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black scale-100'
-                          : 'border-zinc-300 dark:border-zinc-700 bg-transparent hover:border-black dark:hover:border-white'
+                        ? 'bg-black dark:bg-white border-black dark:border-white text-white dark:text-black scale-100'
+                        : 'border-zinc-300 dark:border-zinc-700 bg-transparent hover:border-black dark:hover:border-white'
                         }`}
                     >
                       {task.status === 'Completed' && (
@@ -348,8 +341,8 @@ export const Dashboard: React.FC = () => {
                     <div>
                       <p
                         className={`font-medium transition-all duration-200 ${task.status === 'Completed'
-                            ? 'text-zinc-400 dark:text-zinc-500 line-through'
-                            : 'text-black dark:text-white'
+                          ? 'text-zinc-400 dark:text-zinc-500 line-through'
+                          : 'text-black dark:text-white'
                           }`}
                       >
                         {task.title}
@@ -363,10 +356,10 @@ export const Dashboard: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <span
                       className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors duration-200 ${task.status === 'In Progress'
+                        ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
+                        : task.status === 'Pending'
                           ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
-                          : task.status === 'Pending'
-                            ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
-                            : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent'
+                          : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black border-transparent'
                         }`}
                     >
                       {statusLabel(task.status)}

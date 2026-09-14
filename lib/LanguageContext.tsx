@@ -11,26 +11,34 @@ interface LanguageContextValue {
 }
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
-
 const STORAGE_KEY = 'task-flow-locale';
+
+const isValidLocale = (value: unknown): value is Locale =>
+  value === 'en' || value === 'ar' || value === 'fr' || value === 'es' || value === 'tr';
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [locale, setLocaleState] = useState<Locale>('en');
-
-  // Load saved language preference on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY) as Locale | null;
-    if (saved && (saved === 'en' || saved === 'ar'|| saved === 'fr'|| saved === 'es'|| saved === 'tr')) {
-      setLocaleState(saved);
-      applyLocale(saved);
-    }
-  }, []);
+  const [mounted, setMounted] = useState(false);
 
   const applyLocale = (loc: Locale) => {
     const dir = loc === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.setAttribute('dir', dir);
     document.documentElement.setAttribute('lang', loc);
   };
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const domLocale = document.documentElement.getAttribute('lang');
+
+    // Check localStorage FIRST before checking default DOM attribute
+    const activeLocale = isValidLocale(saved)
+      ? saved
+      : (isValidLocale(domLocale) ? domLocale : 'en');
+
+    setLocaleState(activeLocale);
+    applyLocale(activeLocale);
+    setMounted(true);
+  }, []);
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
@@ -39,11 +47,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
-  const t = translations[locale];
+  const t = translations[locale] || translations['en'];
 
   return (
     <LanguageContext.Provider value={{ locale, t, setLocale, dir }}>
-      {children}
+      <div style={{ visibility: mounted ? 'visible' : 'hidden', display: 'contents' }}>
+        {children}
+      </div>
     </LanguageContext.Provider>
   );
 };
