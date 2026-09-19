@@ -192,6 +192,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose 
 
               <hr className="border-zinc-100 dark:border-zinc-800" />
 
+
+
               {/* Language Section */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -210,8 +212,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose 
                         type="button"
                         onClick={() => setLocale(lang.code)}
                         className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium transition-all cursor-pointer active:scale-[0.98] ${isActive
-                            ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
-                            : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/60'
+                          ? 'bg-black dark:bg-white text-white dark:text-black shadow-xs'
+                          : 'bg-zinc-50 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/60'
                           }`}
                       >
                         <span className="text-base">{lang.flag}</span>
